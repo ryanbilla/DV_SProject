@@ -27,7 +27,6 @@ output: html_document
 
 #### R markdown code
 #####Immediately below is the code that embeds the pictures into the HTML
-#####Since this project is only for Tableau, the third folder was not used.
 
 
 ```
