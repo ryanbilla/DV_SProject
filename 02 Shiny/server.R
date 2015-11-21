@@ -13,21 +13,21 @@ shinyServer(function(input, output) {
   observeEvent(input$light, { rv$alpha <- 0.5 })
   observeEvent(input$dark, { rv$alpha <- 0.75 })
   
-  df1 <- eventReactive(input$clicks, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
-                                                                               "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
-                                                                               case
-                                                                               when kpi < "p1" then \\\'03 Low\\\'
-                                                                               when kpi < "p2" then \\\'02 Medium\\\'
-                                                                               else \\\'01 High\\\'
-                                                                               end kpi
-                                                                               from (select AGE_GROUP, SEX, 
-                                                                               sum(NUMBER_OF_DEATHS)/1000000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
-                                                                               (sum(NUMBER_OF_DEATHS) / sum(DEATH_RATE_PER_100_000))*10 as kpi
-                                                                               from DISEASE 
-                                                                               group by SEX, AGE_GROUP)
-                                                                               order by AGE_GROUP;"
-                                                                               ')), httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_nar784', PASS='orcl_nar784', 
-                                                                                                 MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
+  df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
+            "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
+                                                                                case
+                                                                                when kpi < "p1" then \\\'03 Low\\\'
+                                                                                when kpi < "p2" then \\\'02 Medium\\\'
+                                                                                else \\\'01 High\\\'
+                                                                                end kpi
+                                                                                from (select AGE_GROUP, SEX, 
+                                                                                sum(NUMBER_OF_DEATHS)/1000000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
+                                                                                (sum(NUMBER_OF_DEATHS) / sum(DEATH_RATE_PER_100_000))*10 as kpi
+                                                                                from DISEASE 
+                                                                                group by SEX, AGE_GROUP)
+                                                                                order by AGE_GROUP;"
+                                                                                ')), httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_nar784', PASS='orcl_nar784', 
+                                                                                                  MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
   })
   
   output$distPlot1 <- renderPlot({             
@@ -38,7 +38,7 @@ shinyServer(function(input, output) {
       labs(title='Mortality of the World Population\n Number of Deaths(millions), Sum of Death Rate per 100,000 (millions),\n and Ratio Between the Number of Deaths and Death Rate') +
       labs(x=paste("Age Group"), y=paste("Sex")) +
       layer(data=df1(), 
-            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,2)), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,1)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
@@ -46,21 +46,14 @@ shinyServer(function(input, output) {
             position=position_identity()
       ) +
       layer(data=df1(), 
-            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,2)), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,1)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
             geom_params=list(colour="black", vjust=2), 
             position=position_identity()
       ) +
-      layer(data=df1(), 
-            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(RATIO, 2)), 
-            stat="identity", 
-            stat_params=list(), 
-            geom="text",
-            geom_params=list(colour="black", vjust=4), 
-            position=position_identity()
-      ) +
+      
       layer(data=df1(), 
             mapping=aes(x=as.character(AGE_GROUP), y=SEX, fill=KPI), 
             stat="identity", 
@@ -73,15 +66,15 @@ shinyServer(function(input, output) {
     plot
   }) 
   
-  observeEvent(input$clicks, {
-    print(as.numeric(input$clicks))
+  observeEvent(input$clicks1, {
+    print(as.numeric(input$clicks1))
   })
   
   # Begin code for Second Tab (Bar Chart):
   
   df2 <- eventReactive(input$clicks2, {bar_df})
   
-  output$distPlot2 <- renderPlot(height=1000, width=2000, {
+  output$distPlot2 <- renderPlot(height=700, width=1000, {
     plot1 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
@@ -137,7 +130,7 @@ shinyServer(function(input, output) {
   
 df3 <- eventReactive(input$clicks3, {death_df  })
   
-  output$distPlot3 <- renderPlot(height=1000, width=2000, {
+  output$distPlot3 <- renderPlot(height=700, width=1000, {
     plot3 <- ggplot() + 
       coord_cartesian() + 
       scale_x_continuous() +
