@@ -20,7 +20,7 @@ output: html_document
 #### Folders Needed
 #####00 Doc: Holds the .Rmd and .html files containing these instructions and project output and also holds RPROFILE to load all required packages.
 #####01 Data: Generates the code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.
-#####02 Shiny: Contains the server.R, shiny.txt and ur.R files for the shiny application.
+#####02 Shiny: Contains the server.R and ui.R files for the shiny application.
 
 #### Data Description
 ##### Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.
@@ -101,9 +101,8 @@ output: html_document
 
 
 ```{r warning = FALSE}
-#source("../00 Doc/Rprofile.R", echo = TRUE)
-#source("../01 Data/Death_dataframes.R", echo = TRUE)
-#source("../03 R SQL Visualizations/R SQL.R", echo = TRUE)
+source("../00 Doc/Rprofile.R", echo = TRUE)
+source("../01 Data/Death_dataframes.R", echo = TRUE)
 ```{r}
 
 
