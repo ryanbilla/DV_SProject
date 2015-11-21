@@ -1,7 +1,7 @@
 ---
-title: "Project 5 Knit"
+title: "Project 6 Knit"
 author: "Nathan Riojas, Ryan Billa, Corey Monreal-Jackson"
-date: "November 13, 2015"
+date: "November 23, 2015"
 output: html_document
 ---
 
@@ -9,18 +9,18 @@ output: html_document
 #####1. Using GitHub, create a Repo
 #####2. Clone the Repository into the Data Visualization Folder (Or the folder you wish)
 #####3. Create R Studio Folders for all the project development (folder descriptions below)
+#####4. Use KnitR to to build an HTML to reproduce the project
 #####4. Find a CSV that permits the creation of crosstabs, bar charts, and scatter plots
 #####5. Modify the R_ETL.R given and run the code to get the code to develop a SQL table
 #####6. Using Oracle SQL Developer, paste the code output from the R_ETL.R script to create a table
 #####7. After the table is created, import the data from the CSV reformattted file to the table
 #####9. Using R and SQL, recreate the three required visualization plots that were made in tableau
-#####10. Blend the new data source using tableau and R and SQL. The .twbx will be placed in 02 Tableau
+#####10. Create a shiny application using SQL and R to produce a scatter plot, crosstab with a KPI and parameters, and labeled bar chart with reference lines in project 5
 
 #### Folders Needed
-#####00 Doc: Holds the .Rmd and .html files containing these instructions and project output. Also holds RPROFILE to load all required packages and has the png files.
+#####00 Doc: Holds the .Rmd and .html files containing these instructions and project output and also holds RPROFILE to load all required packages.
 #####01 Data: Generates the code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.
-#####02 Tableau: Contains the .twbx file that has the tableau workbook
-#####03 R SQL Visualizations: Contains the .R files that use ggplot to generate our graphs
+#####02 Shiny: Contains the server.R, shiny.txt and ur.R files for the shiny application.
 
 #### Data Description
 ##### Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.
@@ -95,114 +95,15 @@ output: html_document
 #}
 #sql <- paste(sql, ");")
 #cat(sql)
-```
-
-
 
 ```
-#require(tidyr)
-#require(dplyr)
-#require(ggplot2)
-
-#setwd("C:/Users/Nathan R/Documents/DataVisualization/Project 4/01 Data/CSVs")
-
-#file_path <- "Country GDP.csv"
-
-#df <- read.csv(file_path, stringsAsFactors = FALSE)
-
-## Replace "." (i.e., period) with "_" in the column names.
-#names(df) <- gsub("\\.+", "_", names(df))
-
-## str(df) # Uncomment this and  run just the lines to here to get column types to use for getting the list of measures.
-
-#measures <- c("2005", "2006", "2007", "2008", "2009", "2010" , "2011", "2012", "2013", "2014", "2015", "2016", "2017", #"2018", "2019", "2020")
-##measures <- NA # Do this if there are no measures.
-
-## Get rid of special characters in each column.
-## Google ASCII Table to understand the following:
-#for(n in names(df)) {
-#  df[n] <- data.frame(lapply(df[n], gsub, pattern="[^ -~]",replacement= ""))
-#}
-
-#dimensions <- setdiff(names(df), measures)
-#if( length(measures) > 1 || ! is.na(dimensions)) {
-#  for(d in dimensions) {
-#    # Get rid of " and ' in dimensions.
-#    df[d] <- data.frame(lapply(df[d], gsub, pattern="[\"']",replacement= ""))
-#    # Change & to and in dimensions.
-#    df[d] <- data.frame(lapply(df[d], gsub, pattern="&",replacement= " and "))
-#    # Change : to ; in dimensions.
-#    df[d] <- data.frame(lapply(df[d], gsub, pattern=":",replacement= ";"))
-#  }
-#}
-
-#library(lubridate)
-## Fix date columns, this needs to be done by hand because | needs to be correct.
-##                                                        \_/
-#df$Order_Date <- gsub(" [0-9]+:.*", "", gsub(" UTC", "", mdy(as.character(df$Order_Date), tz="UTC")))
-#df$Ship_Date  <- gsub(" [0-9]+:.*", "", gsub(" UTC", "", mdy(as.character(df$Ship_Date),  tz="UTC")))
-
-## The following is an example of dealing with special cases like making state abbreviations be all upper case.
-## df["State"] <- data.frame(lapply(df["State"], toupper))
-
-## Get rid of all characters in measures except for numbers, the - sign, and period.dimensions
-#if( length(measures) > 1 || ! is.na(measures)) {
-#  for(m in measures) {
-#    df[m] <- data.frame(lapply(df[m], gsub, pattern="[^--.0-9]",replacement= ""))
-#  }
-#}
-
-#write.csv(df, paste(gsub(".csv", "", file_path), ".reformatted.csv", sep=""), row.names=FALSE, na = "")
-
-#tableName <- gsub(" +", "_", gsub("[^A-z, 0-9, ]", "", gsub(".csv", "", file_path)))
-#sql <- paste("CREATE TABLE", tableName, "(\n-- Change table_name to the table name you want.\n")
-#if( length(measures) > 1 || ! is.na(dimensions)) {
-#  for(d in dimensions) {
-#    sql <- paste(sql, paste(d, "varchar2(4000),\n"))
-#  }
-#}
-#if( length(measures) > 1 || ! is.na(measures)) {
-#  for(m in measures) {
-#    if(m != tail(measures, n=1)) sql <- paste(sql, paste(m, "number(38,4),\n"))
-#    else sql <- paste(sql, paste(m, "number(38,4)\n"))
-#  }
-#}
-#sql <- paste(sql, ");")
-#cat(sql)
-```
 
 
-
-### Visualizations
-
-
-
-###   Bar Chart: 
-####Shows how the death rate affects the sexes in several countries
-
-![](../00 Doc/Bar Chart.png)
-
-###   Crosstab: 
-####Shows how countries deaths rates are relative to each other using KPI
-
-![](../00 Doc/CrossTab.png)
-
-###   Scatter Plot: 
-####Shows how number of deaths correlates to the death rate for sex and age groups
-
-![](../00 Doc/Scatter Plot.png)
-
-###   Our Blending In Tableau: 
-####Relates the GDP of various countries since 2005 extrapolated to 2020 as it relates to the Death Rate Per 100,000
-
-![](../00 Doc/Blending.png)
-
-### R and SQL Code And Visualizations:
 
 ```{r warning = FALSE}
-source("../00 Doc/Rprofile.R", echo = TRUE)
-source("../01 Data/Death_dataframes.R", echo = TRUE)
-source("../03 R SQL Visualizations/R SQL.R", echo = TRUE)
+#source("../00 Doc/Rprofile.R", echo = TRUE)
+#source("../01 Data/Death_dataframes.R", echo = TRUE)
+#source("../03 R SQL Visualizations/R SQL.R", echo = TRUE)
 ```{r}
 
 
