@@ -5,14 +5,32 @@ require(ggplot2)
 require(dplyr)
 require(shiny)
 
+
+death_df <- data.frame(fromJSON(getURL(URLencode('skipper.cs.utexas.edu:5001/rest/native/?query="select * from DISEASE where NUMBER_OF_DEATHS < 100000"'),httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_nar784', PASS='orcl_nar784', MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON'), verbose = TRUE), ))
+
+summary(death_df)
+head(death_df)
+
+
+# Create the Bar Chart Data Frame
+
+bar_df <- death_df %>% group_by(COUNTRY_NAME, SEX) %>% filter(COUNTRY_NAME %in% c("Afghanistan", "China", "Colombia", "Japan", "Korea, Republic of", "Pakistan", "Philippines", "Spain", "United Kingdom", "United States")) %>% filter(SEX %in% c("Female", "Male")) %>% summarize(AVG_DR = mean(DEATH_RATE_PER_100_000))
+
+bar_comb <- bar_df %>% ungroup %>% group_by(SEX) %>% summarize(WINDOW_AVG_DR=mean(AVG_DR))
+bar_df <- inner_join(bar_df, bar_comb, by="SEX") %>% arrange(COUNTRY_NAME)
+
+summary(bar_df)
+
 shinyServer(function(input, output) {
+  
+# Begin code for first plot (crosstab): use light and dark values to adjust the plot when it is run. We use SQL queries to generate this plot. Size of plot is adjustable.  
   
   KPI_Low_Max_value <- reactive({input$KPI1})     
   KPI_Medium_Max_value <- reactive({input$KPI2})
   rv <- reactiveValues(alpha = 0.50)
-  observeEvent(input$light, { rv$alpha <- 0.5 })
-  observeEvent(input$dark, { rv$alpha <- 0.75 })
-  
+  observeEvent(input$light, { rv$alpha <- 0.2 })
+  observeEvent(input$dark, { rv$alpha <- 0.85 })
+
   df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
             "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
                                                                                 case
@@ -21,8 +39,8 @@ shinyServer(function(input, output) {
                                                                                 else \\\'01 High\\\'
                                                                                 end kpi
                                                                                 from (select AGE_GROUP, SEX, 
-                                                                                sum(NUMBER_OF_DEATHS)/1000000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
-                                                                                (sum(NUMBER_OF_DEATHS) / sum(DEATH_RATE_PER_100_000))*10 as kpi
+                                                                                sum(NUMBER_OF_DEATHS)/100000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
+                                                                                (sum(NUMBER_OF_DEATHS) / (sum(DEATH_RATE_PER_100_000)/10)) as kpi
                                                                                 from DISEASE 
                                                                                 group by SEX, AGE_GROUP)
                                                                                 order by AGE_GROUP;"
@@ -30,12 +48,12 @@ shinyServer(function(input, output) {
                                                                                                   MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
   })
   
-  output$distPlot1 <- renderPlot({             
+  output$distPlot1 <- renderPlot(height=500, width=925,{             
     plot <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_discrete() +
-      labs(title='Mortality of the World Population\n Number of Deaths(millions), Sum of Death Rate per 100,000 (millions),\n and Ratio Between the Number of Deaths and Death Rate') +
+      labs(title=isolate(input$title)) +
       labs(x=paste("Age Group"), y=paste("Sex")) +
       layer(data=df1(), 
             mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,1)), 
@@ -70,7 +88,13 @@ shinyServer(function(input, output) {
     print(as.numeric(input$clicks1))
   })
   
-  # Begin code for Second Tab (Bar Chart):
+  
+  
+  
+  
+# Begin code for Second Tab (Bar Chart): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+  
+  
   
   df2 <- eventReactive(input$clicks2, {bar_df})
   
@@ -125,9 +149,14 @@ shinyServer(function(input, output) {
   observeEvent(input$clicks, {
     print(as.numeric(input$clicks))
   })
+ 
   
-  # Begin code for Third Tab (Scatter Plot):
+   
+# Begin code for Third Tab (Scatter Plot): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+ 
   
+  
+   
 df3 <- eventReactive(input$clicks3, {death_df  })
   
   output$distPlot3 <- renderPlot(height=700, width=1000, {

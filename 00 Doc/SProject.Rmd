@@ -19,14 +19,16 @@ output: html_document
 
 #### Folders Needed
 #####00 Doc: Holds the .Rmd and .html files containing these instructions and project output and also holds RPROFILE to load all required packages.
-#####01 Data: Generates the code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.
+#####01 Data: Generates the ETL code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.
 #####02 Shiny: Contains the server.R and ui.R files for the shiny application.
 
 #### Data Description
 ##### Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.
 
-#### R markdown code
-#####Immediately below is the code that embeds the pictures into the HTML
+###Project WebApp Link
+###RYAN PUT IT HERE
+### R markdown code
+####Immediately below is the ETL code 
 
 
 ```
@@ -95,6 +97,205 @@ output: html_document
 #sql <- paste(sql, ");")
 #cat(sql)
 
+```
+###server.R code
+```
+shinyServer(function(input, output) {
+  
+# Begin code for first plot (crosstab): use light and dark values to adjust the plot when it is run. We use SQL queries to generate this plot. Size of plot is adjustable.  
+  
+  KPI_Low_Max_value <- reactive({input$KPI1})     
+  KPI_Medium_Max_value <- reactive({input$KPI2})
+  rv <- reactiveValues(alpha = 0.50)
+  observeEvent(input$light, { rv$alpha <- 0.2 })
+  observeEvent(input$dark, { rv$alpha <- 0.85 })
+
+  df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
+            "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
+                                                                                case
+                                                                                when kpi < "p1" then \\\'03 Low\\\'
+                                                                                when kpi < "p2" then \\\'02 Medium\\\'
+                                                                                else \\\'01 High\\\'
+                                                                                end kpi
+                                                                                from (select AGE_GROUP, SEX, 
+                                                                                sum(NUMBER_OF_DEATHS)/100000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
+                                                                                (sum(NUMBER_OF_DEATHS) / (sum(DEATH_RATE_PER_100_000)/10)) as kpi
+                                                                                from DISEASE 
+                                                                                group by SEX, AGE_GROUP)
+                                                                                order by AGE_GROUP;"
+                                                                                ')), httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_nar784', PASS='orcl_nar784', 
+                                                                                                  MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
+  })
+  
+  output$distPlot1 <- renderPlot(height=500, width=925,{             
+    plot <- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_discrete() +
+      labs(title=isolate(input$title)) +
+      labs(x=paste("Age Group"), y=paste("Sex")) +
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,1)), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black"), 
+            position=position_identity()
+      ) +
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,1)), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black", vjust=2), 
+            position=position_identity()
+      ) +
+      
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, fill=KPI), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="tile",
+            geom_params=list(alpha=0.50), 
+            position=position_identity()
+            
+      )
+    plot
+  }) 
+  
+  observeEvent(input$clicks1, {
+    print(as.numeric(input$clicks1))
+  })
+  
+  
+  
+  
+  
+# Begin code for Second Tab (Bar Chart): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+  
+  
+  
+  df2 <- eventReactive(input$clicks2, {bar_df})
+  
+  output$distPlot2 <- renderPlot(height=700, width=1000, {
+    plot1 <- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_continuous() +
+      facet_wrap(~SEX, ncol=1) +
+      labs(title='Country vs Death Rate per 100000 ') +
+      labs(x=paste(""), y=paste("Avg. Death Rate per 100000")) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="bar",
+            geom_params=list(colour="sky blue", fill="dark green"), 
+            position=position_identity()
+      ) + coord_flip() +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR)), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black", hjust=-0.5), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(WINDOW_AVG_DR)), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black", hjust=-2), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR - WINDOW_AVG_DR)), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="text",
+            geom_params=list(colour="black", hjust=-5), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(yintercept = WINDOW_AVG_DR), 
+            geom="hline",
+            geom_params=list(colour="red")
+      ) 
+    
+    plot1
+  })
+  observeEvent(input$clicks, {
+    print(as.numeric(input$clicks))
+  })
+ 
+  
+   
+# Begin code for Third Tab (Scatter Plot): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+ 
+  
+  
+   
+df3 <- eventReactive(input$clicks3, {death_df  })
+  
+  output$distPlot3 <- renderPlot(height=700, width=1000, {
+    plot3 <- ggplot() + 
+      coord_cartesian() + 
+      scale_x_continuous() +
+      scale_y_continuous() +
+      labs(title='How Disease Affects Number of Deaths Worldwide \n When Compared to Death Per 100,000 Statistics from 1970 to 2010') +
+      labs(x="Number of Deaths", y=paste("Death Rate Per 100,000")) +
+      layer(data=df3(), 
+            mapping=aes(x=as.numeric(as.character(NUMBER_OF_DEATHS)), y=as.numeric(as.character(DEATH_RATE_PER_100_000)), color=YEAR), 
+            stat="identity", 
+            stat_params=list(), 
+            geom="point",
+            geom_params=list(), 
+            position=position_jitter(width=0.3, height=0)
+      )
+    
+    plot3
+  })
+})
+```
+###ui.R Code
+```
+navbarPage(
+  title = "Elements of Visualization",
+  tabPanel(title = "Crosstab",
+           sidebarPanel(
+             actionButton(inputId = "light", label = "Light"),
+             actionButton(inputId = "dark", label = "Dark"),
+             sliderInput("KPI1", "KPI_Low_Max_value:", 
+                         min = 1, max = 15,  value = 9),
+             sliderInput("KPI2", "KPI_Medium_Max_value:", 
+                         min = 15, max = 50,  value = 35),
+             textInput(inputId = "title", 
+                       label = "Crosstab Title",
+                       value = "Disease and World Population Cross Tab: Sum_Death,Sum_100, Sum_Death/Sum_100"),
+             actionButton(inputId = "clicks1",  label = "Click me")
+           ),
+           
+           mainPanel(plotOutput("distPlot1")
+           )
+  ),
+  tabPanel(title = "Barchart",
+           sidebarPanel(
+             actionButton(inputId = "clicks2",  label = "Click me")
+           ),
+           
+           mainPanel(plotOutput("distPlot2")
+           )
+  ),
+  tabPanel(title = "Scatter Plot",
+           sidebarPanel(
+             actionButton(inputId = "clicks3",  label = "Click me")
+           ),
+           
+           mainPanel(plotOutput("distPlot3")
+           )        
+  )
+)
 ```
 
 

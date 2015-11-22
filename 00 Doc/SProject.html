@@ -106,8 +106,8 @@ img {
 <div id="doc-holds-the-.rmd-and-.html-files-containing-these-instructions-and-project-output-and-also-holds-rprofile-to-load-all-required-packages." class="section level5">
 <h5>00 Doc: Holds the .Rmd and .html files containing these instructions and project output and also holds RPROFILE to load all required packages.</h5>
 </div>
-<div id="data-generates-the-code-to-create-the-table-in-oracle.-gathers-the-data-from-the-database-for-and-puts-it-into-data-frames." class="section level5">
-<h5>01 Data: Generates the code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.</h5>
+<div id="data-generates-the-etl-code-to-create-the-table-in-oracle.-gathers-the-data-from-the-database-for-and-puts-it-into-data-frames." class="section level5">
+<h5>01 Data: Generates the ETL code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.</h5>
 </div>
 <div id="shiny-contains-the-server.r-and-ui.r-files-for-the-shiny-application." class="section level5">
 <h5>02 Shiny: Contains the server.R and ui.R files for the shiny application.</h5>
@@ -119,13 +119,10 @@ img {
 <h5>Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.</h5>
 </div>
 </div>
-<div id="r-markdown-code" class="section level4">
-<h4>R markdown code</h4>
-<div id="immediately-below-is-the-code-that-embeds-the-pictures-into-the-html" class="section level5">
-<h5>Immediately below is the code that embeds the pictures into the HTML</h5>
-</div>
-<div id="since-this-project-is-only-for-tableau-the-third-folder-was-not-used." class="section level5">
-<h5>Since this project is only for Tableau, the third folder was not used.</h5>
+<div id="r-markdown-code" class="section level3">
+<h3>R markdown code</h3>
+<div id="immediately-below-is-the-etl-code" class="section level4">
+<h4>Immediately below is the ETL code</h4>
 <pre><code>#setwd(&quot;C:/Users/Nathan R/Documents/DataVisualization/Project 4/01 Data/CSVs&quot;)
 
 #file_path &lt;- &quot;Effect of Disease Country Pop.csv&quot;
@@ -191,6 +188,206 @@ img {
 #sql &lt;- paste(sql, &quot;);&quot;)
 #cat(sql)
 </code></pre>
+</div>
+</div>
+<div id="server.r-code" class="section level3">
+<h3>server.R code</h3>
+<pre><code>shinyServer(function(input, output) {
+  
+# Begin code for first plot (crosstab): use light and dark values to adjust the plot when it is run. We use SQL queries to generate this plot. Size of plot is adjustable.  
+  
+  KPI_Low_Max_value &lt;- reactive({input$KPI1})     
+  KPI_Medium_Max_value &lt;- reactive({input$KPI2})
+  rv &lt;- reactiveValues(alpha = 0.50)
+  observeEvent(input$light, { rv$alpha &lt;- 0.2 })
+  observeEvent(input$dark, { rv$alpha &lt;- 0.85 })
+
+  df1 &lt;- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub(&quot;\n&quot;, &quot; &quot;, 'skipper.cs.utexas.edu:5001/rest/native/?query=
+            &quot;select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
+                                                                                case
+                                                                                when kpi &lt; &quot;p1&quot; then \\\'03 Low\\\'
+                                                                                when kpi &lt; &quot;p2&quot; then \\\'02 Medium\\\'
+                                                                                else \\\'01 High\\\'
+                                                                                end kpi
+                                                                                from (select AGE_GROUP, SEX, 
+                                                                                sum(NUMBER_OF_DEATHS)/100000 as sum_death, sum(DEATH_RATE_PER_100_000)/1000000 as sum_100, 
+                                                                                (sum(NUMBER_OF_DEATHS) / (sum(DEATH_RATE_PER_100_000)/10)) as kpi
+                                                                                from DISEASE 
+                                                                                group by SEX, AGE_GROUP)
+                                                                                order by AGE_GROUP;&quot;
+                                                                                ')), httpheader=c(DB='jdbc:oracle:thin:@sayonara.microlab.cs.utexas.edu:1521:orcl', USER='C##cs329e_nar784', PASS='orcl_nar784', 
+                                                                                                  MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
+  })
+  
+  output$distPlot1 &lt;- renderPlot(height=500, width=925,{             
+    plot &lt;- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_discrete() +
+      labs(title=isolate(input$title)) +
+      labs(x=paste(&quot;Age Group&quot;), y=paste(&quot;Sex&quot;)) +
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,1)), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;text&quot;,
+            geom_params=list(colour=&quot;black&quot;), 
+            position=position_identity()
+      ) +
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,1)), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;text&quot;,
+            geom_params=list(colour=&quot;black&quot;, vjust=2), 
+            position=position_identity()
+      ) +
+      
+      layer(data=df1(), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, fill=KPI), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;tile&quot;,
+            geom_params=list(alpha=0.50), 
+            position=position_identity()
+            
+      )
+    plot
+  }) 
+  
+  observeEvent(input$clicks1, {
+    print(as.numeric(input$clicks1))
+  })
+  
+  
+  
+  
+  
+# Begin code for Second Tab (Bar Chart): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+  
+  
+  
+  df2 &lt;- eventReactive(input$clicks2, {bar_df})
+  
+  output$distPlot2 &lt;- renderPlot(height=700, width=1000, {
+    plot1 &lt;- ggplot() + 
+      coord_cartesian() + 
+      scale_x_discrete() +
+      scale_y_continuous() +
+      facet_wrap(~SEX, ncol=1) +
+      labs(title='Country vs Death Rate per 100000 ') +
+      labs(x=paste(&quot;&quot;), y=paste(&quot;Avg. Death Rate per 100000&quot;)) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;bar&quot;,
+            geom_params=list(colour=&quot;sky blue&quot;, fill=&quot;dark green&quot;), 
+            position=position_identity()
+      ) + coord_flip() +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR)), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;text&quot;,
+            geom_params=list(colour=&quot;black&quot;, hjust=-0.5), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(WINDOW_AVG_DR)), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;text&quot;,
+            geom_params=list(colour=&quot;black&quot;, hjust=-2), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR - WINDOW_AVG_DR)), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;text&quot;,
+            geom_params=list(colour=&quot;black&quot;, hjust=-5), 
+            position=position_identity()
+      ) +
+      layer(data=df2(), 
+            mapping=aes(yintercept = WINDOW_AVG_DR), 
+            geom=&quot;hline&quot;,
+            geom_params=list(colour=&quot;red&quot;)
+      ) 
+    
+    plot1
+  })
+  observeEvent(input$clicks, {
+    print(as.numeric(input$clicks))
+  })
+ 
+  
+   
+# Begin code for Third Tab (Scatter Plot): Size of plot is adjustable. This code uses a dataframe generated with R instead of SQL queries.
+ 
+  
+  
+   
+df3 &lt;- eventReactive(input$clicks3, {death_df  })
+  
+  output$distPlot3 &lt;- renderPlot(height=700, width=1000, {
+    plot3 &lt;- ggplot() + 
+      coord_cartesian() + 
+      scale_x_continuous() +
+      scale_y_continuous() +
+      labs(title='How Disease Affects Number of Deaths Worldwide \n When Compared to Death Per 100,000 Statistics from 1970 to 2010') +
+      labs(x=&quot;Number of Deaths&quot;, y=paste(&quot;Death Rate Per 100,000&quot;)) +
+      layer(data=df3(), 
+            mapping=aes(x=as.numeric(as.character(NUMBER_OF_DEATHS)), y=as.numeric(as.character(DEATH_RATE_PER_100_000)), color=YEAR), 
+            stat=&quot;identity&quot;, 
+            stat_params=list(), 
+            geom=&quot;point&quot;,
+            geom_params=list(), 
+            position=position_jitter(width=0.3, height=0)
+      )
+    
+    plot3
+  })
+})</code></pre>
+</div>
+<div id="ui.r-code" class="section level3">
+<h3>ui.R Code</h3>
+<pre><code>navbarPage(
+  title = &quot;Elements of Visualization&quot;,
+  tabPanel(title = &quot;Crosstab&quot;,
+           sidebarPanel(
+             actionButton(inputId = &quot;light&quot;, label = &quot;Light&quot;),
+             actionButton(inputId = &quot;dark&quot;, label = &quot;Dark&quot;),
+             sliderInput(&quot;KPI1&quot;, &quot;KPI_Low_Max_value:&quot;, 
+                         min = 1, max = 15,  value = 9),
+             sliderInput(&quot;KPI2&quot;, &quot;KPI_Medium_Max_value:&quot;, 
+                         min = 15, max = 50,  value = 35),
+             textInput(inputId = &quot;title&quot;, 
+                       label = &quot;Crosstab Title&quot;,
+                       value = &quot;Disease and World Population Cross Tab: Sum_Death,Sum_100, Sum_Death/Sum_100&quot;),
+             actionButton(inputId = &quot;clicks1&quot;,  label = &quot;Click me&quot;)
+           ),
+           
+           mainPanel(plotOutput(&quot;distPlot1&quot;)
+           )
+  ),
+  tabPanel(title = &quot;Barchart&quot;,
+           sidebarPanel(
+             actionButton(inputId = &quot;clicks2&quot;,  label = &quot;Click me&quot;)
+           ),
+           
+           mainPanel(plotOutput(&quot;distPlot2&quot;)
+           )
+  ),
+  tabPanel(title = &quot;Scatter Plot&quot;,
+           sidebarPanel(
+             actionButton(inputId = &quot;clicks3&quot;,  label = &quot;Click me&quot;)
+           ),
+           
+           mainPanel(plotOutput(&quot;distPlot3&quot;)
+           )        
+  )
+)</code></pre>
 <pre class="r"><code>source(&quot;../00 Doc/Rprofile.R&quot;, echo = TRUE)</code></pre>
 <pre><code>## 
 ## &gt; require(&quot;ggplot2&quot;)</code></pre>
@@ -302,53 +499,25 @@ img {
 ## 5              10354.435
 ## 6              80432.227
 ## 
-## &gt; KPI_Low_Max_value = 0.5
-## 
-## &gt; KPI_Medium_Max_value = 1
-## 
-## &gt; KPI_df &lt;- death_df %&gt;% group_by(AGE_GROUP, SEX) %&gt;% 
-## +     summarize(sum_death = sum(NUMBER_OF_DEATHS)/1e+06, sum_100 = sum(DEATH_RATE_PER_100_000)/ .... [TRUNCATED] 
-## 
-## &gt; summary(KPI_df)
-##      age_group      sex       SUM_DEATH         SUM_100       
-##  All ages : 3   Both  :21   Min.   : 1.035   Min.   : 0.2729  
-##  d 0-6    : 3   Female:21   1st Qu.: 2.521   1st Qu.: 3.9474  
-##  d 28-364 : 3   Male  :21   Median : 3.783   Median : 7.4317  
-##  d 7-27   : 3               Mean   : 5.487   Mean   : 9.2386  
-##  y 1-4    : 3               3rd Qu.: 6.349   3rd Qu.:13.6926  
-##  y 10-14  : 3               Max.   :27.405   Max.   :36.5324  
-##  (Other)  :45                                                 
-##      RATIO            KPI           
-##  Min.   :0.1036   Length:63         
-##  1st Qu.:0.2864   Class :character  
-##  Median :0.7351   Mode  :character  
-##  Mean   :1.2222                     
-##  3rd Qu.:1.6814                     
-##  Max.   :7.2131                     
-##                                     
-## 
-## &gt; head(KPI_df)
-## Source: local data frame [6 x 6]
-## 
-##   age_group    sex SUM_DEATH  SUM_100     RATIO     KPI
-##      (fctr) (fctr)     (dbl)    (dbl)     (dbl)   (chr)
-## 1  All ages   Both 27.404659 15.65569 1.7504595 01 High
-## 2  All ages Female 23.712542 18.95019 1.2513088 01 High
-## 3  All ages   Male 25.129415 14.71426 1.7078268 01 High
-## 4    d 0-6    Both  7.214035 34.04340 0.2119070  03 Low
-## 5    d 0-6  Female  3.782982 36.53240 0.1035514  03 Low
-## 6    d 0-6    Male  4.989569 32.48394 0.1536011  03 Low
-## 
-## &gt; df &lt;- death_df %&gt;% group_by(COUNTRY_NAME, SEX) %&gt;% 
+## &gt; bar_df &lt;- death_df %&gt;% group_by(COUNTRY_NAME, SEX) %&gt;% 
 ## +     filter(COUNTRY_NAME %in% c(&quot;Afghanistan&quot;, &quot;China&quot;, &quot;Colombia&quot;, 
-## +         &quot;Japan&quot;, &quot;Korea, ...&quot; ... [TRUNCATED] 
+## +         &quot;Japan&quot;, &quot;Ko ...&quot; ... [TRUNCATED] 
 ## 
-## &gt; df1 &lt;- df %&gt;% ungroup %&gt;% group_by(SEX) %&gt;% summarize(WINDOW_AVG_DR = mean(AVG_DR))
+## &gt; bar_comb &lt;- bar_df %&gt;% ungroup %&gt;% group_by(SEX) %&gt;% 
+## +     summarize(WINDOW_AVG_DR = mean(AVG_DR))
 ## 
-## &gt; df &lt;- inner_join(df, df1, by = &quot;SEX&quot;) %&gt;% arrange(COUNTRY_NAME)
+## &gt; bar_df &lt;- inner_join(bar_df, bar_comb, by = &quot;SEX&quot;) %&gt;% 
+## +     arrange(COUNTRY_NAME)
 ## 
-## &gt; spread(df, COUNTRY_NAME, AVG_DR) %&gt;% View</code></pre>
-</div>
+## &gt; summary(bar_df)
+##              COUNTRY_NAME     SEX         AVG_DR      WINDOW_AVG_DR 
+##  Afghanistan       :2     Both  : 0   Min.   : 5328   Min.   :9359  
+##  China             :2     Female:10   1st Qu.: 7163   1st Qu.:9359  
+##  Colombia          :2     Male  :10   Median : 9566   Median :9476  
+##  Japan             :2                 Mean   : 9476   Mean   :9476  
+##  Korea, Republic of:2                 3rd Qu.:11310   3rd Qu.:9594  
+##  Pakistan          :2                 Max.   :14771   Max.   :9594  
+##  (Other)           :8</code></pre>
 </div>
 
 
