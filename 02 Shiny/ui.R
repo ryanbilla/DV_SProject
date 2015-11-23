@@ -18,7 +18,7 @@ navbarPage(
                          min = 15, max = 50,  value = 35),
              textInput(inputId = "title", 
                        label = "Crosstab Title",
-                       value = "Disease and World Population Cross Tab: Sum_Death,Sum_100, Sum_Death/Sum_100"),
+                       value = "Disease and World Population Cross Tab (Millions): Sum_Death,Sum_100, Sum_Death/Sum_100"),
              actionButton(inputId = "clicks1",  label = "Click me")
            ),
            

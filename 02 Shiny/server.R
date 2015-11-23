@@ -28,7 +28,7 @@ shinyServer(function(input, output) {
   KPI_Low_Max_value <- reactive({input$KPI1})     
   KPI_Medium_Max_value <- reactive({input$KPI2})
   rv <- reactiveValues(alpha = 0.50)
-  observeEvent(input$light, { rv$alpha <- 0.2 })
+  observeEvent(input$light, { rv$alpha <- 0.5 })
   observeEvent(input$dark, { rv$alpha <- 0.85 })
 
   df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
@@ -48,7 +48,7 @@ shinyServer(function(input, output) {
                                                                                                   MODE='native_mode', MODEL='model', returnDimensions = 'False', returnFor = 'JSON', p1=KPI_Low_Max_value(), p2=KPI_Medium_Max_value()), verbose = TRUE)))
   })
   
-  output$distPlot1 <- renderPlot(height=500, width=925,{             
+  output$distPlot1 <- renderPlot(height=500, width=900,{             
     plot <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
@@ -56,7 +56,7 @@ shinyServer(function(input, output) {
       labs(title=isolate(input$title)) +
       labs(x=paste("Age Group"), y=paste("Sex")) +
       layer(data=df1(), 
-            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,1)), 
+            mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_DEATH,0)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
@@ -98,14 +98,14 @@ shinyServer(function(input, output) {
   
   df2 <- eventReactive(input$clicks2, {bar_df})
   
-  output$distPlot2 <- renderPlot(height=700, width=1000, {
+  output$distPlot2 <- renderPlot(height=450, width=5000, {
     plot1 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_continuous() +
       facet_wrap(~SEX, ncol=1) +
       labs(title='Country vs Death Rate per 100000 ') +
-      labs(x=paste(""), y=paste("Avg. Death Rate per 100000")) +
+      labs(x=paste(""), y=paste("Avg. Death Rate per 100000 (Avg DR,Wnd Avg DR, Avg DR - Wnd Avg in 1000's)")) +
       layer(data=df2(), 
             mapping=aes(x=COUNTRY_NAME, y=AVG_DR), 
             stat="identity", 
@@ -115,27 +115,27 @@ shinyServer(function(input, output) {
             position=position_identity()
       ) + coord_flip() +
       layer(data=df2(), 
-            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR)), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round((AVG_DR/1000),1)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
-            geom_params=list(colour="black", hjust=-0.5), 
+            geom_params=list(colour="black", hjust=0), 
             position=position_identity()
       ) +
       layer(data=df2(), 
-            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(WINDOW_AVG_DR)), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round((WINDOW_AVG_DR/1000),1)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
-            geom_params=list(colour="black", hjust=-2), 
+            geom_params=list(colour="black", hjust=-2.5), 
             position=position_identity()
       ) +
       layer(data=df2(), 
-            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(AVG_DR - WINDOW_AVG_DR)), 
+            mapping=aes(x=COUNTRY_NAME, y=AVG_DR, label=round(((AVG_DR - WINDOW_AVG_DR)/1000),1)), 
             stat="identity", 
             stat_params=list(), 
             geom="text",
-            geom_params=list(colour="black", hjust=-5), 
+            geom_params=list(colour="black", hjust=-9), 
             position=position_identity()
       ) +
       layer(data=df2(), 
@@ -159,7 +159,7 @@ shinyServer(function(input, output) {
    
 df3 <- eventReactive(input$clicks3, {death_df  })
   
-  output$distPlot3 <- renderPlot(height=700, width=1000, {
+  output$distPlot3 <- renderPlot( {
     plot3 <- ggplot() + 
       coord_cartesian() + 
       scale_x_continuous() +
