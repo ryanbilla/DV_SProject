@@ -26,7 +26,9 @@ output: html_document
 ##### Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.
 
 ###Project WebApp Link
-###RYAN PUT IT HERE
+[link](https://nathanriojas.shinyapps.io/WorldDiseasePopulationData)
+
+
 ### R markdown code
 ####Immediately below is the ETL code 
 
@@ -299,10 +301,7 @@ navbarPage(
 ```
 
 
-
 ```{r warning = FALSE}
 source("../00 Doc/Rprofile.R", echo = TRUE)
 source("../01 Data/Death_dataframes.R", echo = TRUE)
 ```{r}
-
-
