@@ -148,7 +148,7 @@ shinyServer(function(input, output) {
             geom="text",
             geom_params=list(colour="black"), 
             position=position_identity()
-      ) +
+      ) + 
       layer(data=df1(), 
             mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,1)), 
             stat="identity", 
