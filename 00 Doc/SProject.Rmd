@@ -16,11 +16,12 @@ output: html_document
 #####7. After the table is created, import the data from the CSV reformattted file to the table
 #####9. Using R and SQL, recreate the three required visualization plots that were made in tableau
 #####10. Create a shiny application using SQL and R to produce a scatter plot, crosstab with a KPI and parameters, and labeled bar chart with reference lines in project 5
+#####11. If you want to add a bootstrap style to you app, create a www subfolder in the shiny folder and create a css file (ours is boostrap.css) to edit your shiny app's look.
 
 #### Folders Needed
 #####00 Doc: Holds the .Rmd and .html files containing these instructions and project output and also holds RPROFILE to load all required packages.
 #####01 Data: Generates the ETL code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.
-#####02 Shiny: Contains the server.R and ui.R files for the shiny application.
+#####02 Shiny: Contains the server.R and ui.R files for the shiny application. Also has our www subfolder that holds a bootsrap.css file that create the style of our app.
 
 #### Data Description
 ##### Our data looks at the way disease affects different countries accross the world. The two main variables are the number of deaths due to disease and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to be able to accurately compare and scale the effect disease has on each country despite size differences. This data is an accumulation of data from 1975-2010.
@@ -101,6 +102,7 @@ output: html_document
 ```
 ###server.R code
 ```
+# server.R
 require(jsonlite)
 require(RCurl)
 require(ggplot2)
@@ -113,9 +115,9 @@ shinyServer(function(input, output) {
   
   KPI_Low_Max_value <- reactive({input$KPI1})     
   KPI_Medium_Max_value <- reactive({input$KPI2})
-  rv <- reactiveValues(alpha = 0.50)
+  rv <- reactiveValues(alpha = 0.5)
   observeEvent(input$light, { rv$alpha <- 0.5 })
-  observeEvent(input$dark, { rv$alpha <- 0.85 })
+  observeEvent(input$dark, { rv$alpha <- 0.78 })
 
   df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
             "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
@@ -135,7 +137,7 @@ shinyServer(function(input, output) {
   })
   
   output$distPlot1 <- renderPlot(height=500, width=900,{             
-    plot <- ggplot() + 
+    plot1 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_discrete() +
@@ -148,7 +150,7 @@ shinyServer(function(input, output) {
             geom="text",
             geom_params=list(colour="black"), 
             position=position_identity()
-      ) + 
+      ) +
       layer(data=df1(), 
             mapping=aes(x=as.character(AGE_GROUP), y=SEX, label=round(SUM_100,1)), 
             stat="identity", 
@@ -163,11 +165,11 @@ shinyServer(function(input, output) {
             stat="identity", 
             stat_params=list(), 
             geom="tile",
-            geom_params=list(alpha=0.50), 
+            geom_params=list(alpha=rv$alpha), 
             position=position_identity()
             
       )
-    plot
+    plot1
   }) 
   
   observeEvent(input$clicks1, {
@@ -185,7 +187,7 @@ shinyServer(function(input, output) {
   df2 <- eventReactive(input$clicks2, {bar_df})
   
   output$distPlot2 <- renderPlot(height=450, width=5000, {
-    plot1 <- ggplot() + 
+    plot2 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_continuous() +
@@ -230,10 +232,10 @@ shinyServer(function(input, output) {
             geom_params=list(colour="red")
       ) 
     
-    plot1
+    plot2
   })
-  observeEvent(input$clicks, {
-    print(as.numeric(input$clicks))
+  observeEvent(input$clicks2, {
+    print(as.numeric(input$clicks2))
   })
  
   
@@ -263,23 +265,61 @@ df3 <- eventReactive(input$clicks3, {death_df  })
     
     plot3
   })
+  observeEvent(input$clicks3, {
+    print(as.numeric(input$clicks3))
+  })
 })
+
 ```
 ###ui.R Code
 ```
+library(shiny)
+shinyUI(fluidPage(
+  
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap.css")
+  ),
+
+  
+  
+  
 navbarPage(
+  
   title = "Elements of Visualization",
+  tabPanel(title = "Data Overview",
+           headerPanel("The Effect of Diseases on World Population"),
+           
+           mainPanel("Our data looks at the way disease affects the population of different countries and the world overall.The two main variables we review are the number of deaths due to disease per country and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to accurately compare and scale the effect disease has on each country despite size differences between country population. This data is an accumulation of data from 1975-2010, so the numbers are not for a single year."
+           ),
+           mainPanel("____________________________________________________________"
+                     
+           ),
+           mainPanel("Here is an explanation of the three visualizations in the next three tabs"
+           
+  ),
+  mainPanel("____________________________________________________________"
+            
+  ),
+  mainPanel("1. Crosstab: An interactive visualization that represents how different age groups are killed by diseases each year. We further break this down by sex. The user can adjust the KPI values. "
+  )
+,
+mainPanel("2. Barchart: A very large barchart (sorry for the size) that compares the death rate per 100,000 for different countries. Also shows window averages."
+)
+,
+mainPanel("3. Scatter Plot: This compares the number of deaths and death rate per 100,000 that the world experiences for different sexes. This shows how normalized values show that the actual number of deaths can hide the true nature of how disease affects the population.")
+),
   tabPanel(title = "Crosstab",
+           
            sidebarPanel(
              actionButton(inputId = "light", label = "Light"),
              actionButton(inputId = "dark", label = "Dark"),
              sliderInput("KPI1", "KPI_Low_Max_value:", 
                          min = 1, max = 15,  value = 9),
              sliderInput("KPI2", "KPI_Medium_Max_value:", 
-                         min = 15, max = 50,  value = 35),
+                         min = 15, max = 80,  value = 35),
              textInput(inputId = "title", 
                        label = "Crosstab Title",
-                       value = "Disease and World Population Cross Tab: Sum_Death,Sum_100, Sum_Death/Sum_100"),
+                       value = "Disease and World Population Cross Tab (Millions): Sum_Death,Sum_100, Sum_Death/Sum_100"),
              actionButton(inputId = "clicks1",  label = "Click me")
            ),
            
@@ -303,6 +343,7 @@ navbarPage(
            )        
   )
 )
+))
 ```
 
 

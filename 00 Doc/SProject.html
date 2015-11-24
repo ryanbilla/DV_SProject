@@ -100,6 +100,9 @@ img {
 <div id="create-a-shiny-application-using-sql-and-r-to-produce-a-scatter-plot-crosstab-with-a-kpi-and-parameters-and-labeled-bar-chart-with-reference-lines-in-project-5" class="section level5">
 <h5>10. Create a shiny application using SQL and R to produce a scatter plot, crosstab with a KPI and parameters, and labeled bar chart with reference lines in project 5</h5>
 </div>
+<div id="if-you-want-to-add-a-bootstrap-style-to-you-app-create-a-www-subfolder-in-the-shiny-folder-and-create-a-css-file-ours-is-boostrap.css-to-edit-your-shiny-apps-look." class="section level5">
+<h5>11. If you want to add a bootstrap style to you app, create a www subfolder in the shiny folder and create a css file (ours is boostrap.css) to edit your shiny app’s look.</h5>
+</div>
 </div>
 <div id="folders-needed" class="section level4">
 <h4>Folders Needed</h4>
@@ -109,8 +112,8 @@ img {
 <div id="data-generates-the-etl-code-to-create-the-table-in-oracle.-gathers-the-data-from-the-database-for-and-puts-it-into-data-frames." class="section level5">
 <h5>01 Data: Generates the ETL code to create the table in Oracle. Gathers the data from the database for and puts it into data frames.</h5>
 </div>
-<div id="shiny-contains-the-server.r-and-ui.r-files-for-the-shiny-application." class="section level5">
-<h5>02 Shiny: Contains the server.R and ui.R files for the shiny application.</h5>
+<div id="shiny-contains-the-server.r-and-ui.r-files-for-the-shiny-application.-also-has-our-www-subfolder-that-holds-a-bootsrap.css-file-that-create-the-style-of-our-app." class="section level5">
+<h5>02 Shiny: Contains the server.R and ui.R files for the shiny application. Also has our www subfolder that holds a bootsrap.css file that create the style of our app.</h5>
 </div>
 </div>
 <div id="data-description" class="section level4">
@@ -196,7 +199,8 @@ img {
 </div>
 <div id="server.r-code" class="section level3">
 <h3>server.R code</h3>
-<pre><code>require(jsonlite)
+<pre><code># server.R
+require(jsonlite)
 require(RCurl)
 require(ggplot2)
 require(dplyr)
@@ -208,9 +212,9 @@ shinyServer(function(input, output) {
   
   KPI_Low_Max_value &lt;- reactive({input$KPI1})     
   KPI_Medium_Max_value &lt;- reactive({input$KPI2})
-  rv &lt;- reactiveValues(alpha = 0.50)
+  rv &lt;- reactiveValues(alpha = 0.5)
   observeEvent(input$light, { rv$alpha &lt;- 0.5 })
-  observeEvent(input$dark, { rv$alpha &lt;- 0.85 })
+  observeEvent(input$dark, { rv$alpha &lt;- 0.78 })
 
   df1 &lt;- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub(&quot;\n&quot;, &quot; &quot;, 'skipper.cs.utexas.edu:5001/rest/native/?query=
             &quot;select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
@@ -230,7 +234,7 @@ shinyServer(function(input, output) {
   })
   
   output$distPlot1 &lt;- renderPlot(height=500, width=900,{             
-    plot &lt;- ggplot() + 
+    plot1 &lt;- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_discrete() +
@@ -258,11 +262,11 @@ shinyServer(function(input, output) {
             stat=&quot;identity&quot;, 
             stat_params=list(), 
             geom=&quot;tile&quot;,
-            geom_params=list(alpha=0.50), 
+            geom_params=list(alpha=rv$alpha), 
             position=position_identity()
             
       )
-    plot
+    plot1
   }) 
   
   observeEvent(input$clicks1, {
@@ -280,7 +284,7 @@ shinyServer(function(input, output) {
   df2 &lt;- eventReactive(input$clicks2, {bar_df})
   
   output$distPlot2 &lt;- renderPlot(height=450, width=5000, {
-    plot1 &lt;- ggplot() + 
+    plot2 &lt;- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_continuous() +
@@ -325,10 +329,10 @@ shinyServer(function(input, output) {
             geom_params=list(colour=&quot;red&quot;)
       ) 
     
-    plot1
+    plot2
   })
-  observeEvent(input$clicks, {
-    print(as.numeric(input$clicks))
+  observeEvent(input$clicks2, {
+    print(as.numeric(input$clicks2))
   })
  
   
@@ -358,23 +362,61 @@ df3 &lt;- eventReactive(input$clicks3, {death_df  })
     
     plot3
   })
-})</code></pre>
+  observeEvent(input$clicks3, {
+    print(as.numeric(input$clicks3))
+  })
+})
+</code></pre>
 </div>
 <div id="ui.r-code" class="section level3">
 <h3>ui.R Code</h3>
-<pre><code>navbarPage(
+<pre><code>library(shiny)
+shinyUI(fluidPage(
+  
+  tags$head(
+    tags$link(rel = &quot;stylesheet&quot;, type = &quot;text/css&quot;, href = &quot;bootstrap.css&quot;)
+  ),
+
+  
+  
+  
+navbarPage(
+  
   title = &quot;Elements of Visualization&quot;,
+  tabPanel(title = &quot;Data Overview&quot;,
+           headerPanel(&quot;The Effect of Diseases on World Population&quot;),
+           
+           mainPanel(&quot;Our data looks at the way disease affects the population of different countries and the world overall.The two main variables we review are the number of deaths due to disease per country and the death rate per 100,000. The latter is a standard way of normalizing the number of deaths to accurately compare and scale the effect disease has on each country despite size differences between country population. This data is an accumulation of data from 1975-2010, so the numbers are not for a single year.&quot;
+           ),
+           mainPanel(&quot;____________________________________________________________&quot;
+                     
+           ),
+           mainPanel(&quot;Here is an explanation of the three visualizations in the next three tabs&quot;
+           
+  ),
+  mainPanel(&quot;____________________________________________________________&quot;
+            
+  ),
+  mainPanel(&quot;1. Crosstab: An interactive visualization that represents how different age groups are killed by diseases each year. We further break this down by sex. The user can adjust the KPI values. &quot;
+  )
+,
+mainPanel(&quot;2. Barchart: A very large barchart (sorry for the size) that compares the death rate per 100,000 for different countries. Also shows window averages.&quot;
+)
+,
+mainPanel(&quot;3. Scatter Plot: This compares the number of deaths and death rate per 100,000 that the world experiences for different sexes. This shows how normalized values show that the actual number of deaths can hide the true nature of how disease affects the population.&quot;)
+),
   tabPanel(title = &quot;Crosstab&quot;,
+           
            sidebarPanel(
              actionButton(inputId = &quot;light&quot;, label = &quot;Light&quot;),
              actionButton(inputId = &quot;dark&quot;, label = &quot;Dark&quot;),
              sliderInput(&quot;KPI1&quot;, &quot;KPI_Low_Max_value:&quot;, 
                          min = 1, max = 15,  value = 9),
              sliderInput(&quot;KPI2&quot;, &quot;KPI_Medium_Max_value:&quot;, 
-                         min = 15, max = 50,  value = 35),
+                         min = 15, max = 80,  value = 35),
              textInput(inputId = &quot;title&quot;, 
                        label = &quot;Crosstab Title&quot;,
-                       value = &quot;Disease and World Population Cross Tab: Sum_Death,Sum_100, Sum_Death/Sum_100&quot;),
+                       value = &quot;Disease and World Population Cross Tab (Millions): Sum_Death,Sum_100, Sum_Death/Sum_100&quot;),
              actionButton(inputId = &quot;clicks1&quot;,  label = &quot;Click me&quot;)
            ),
            
@@ -397,7 +439,8 @@ df3 &lt;- eventReactive(input$clicks3, {death_df  })
            mainPanel(plotOutput(&quot;distPlot3&quot;)
            )        
   )
-)</code></pre>
+)
+))</code></pre>
 <pre class="r"><code>source(&quot;../00 Doc/Rprofile.R&quot;, echo = TRUE)</code></pre>
 <pre><code>## 
 ## &gt; require(&quot;ggplot2&quot;)</code></pre>

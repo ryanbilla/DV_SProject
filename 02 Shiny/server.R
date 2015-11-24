@@ -27,9 +27,9 @@ shinyServer(function(input, output) {
   
   KPI_Low_Max_value <- reactive({input$KPI1})     
   KPI_Medium_Max_value <- reactive({input$KPI2})
-  rv <- reactiveValues(alpha = 0.50)
+  rv <- reactiveValues(alpha = 0.5)
   observeEvent(input$light, { rv$alpha <- 0.5 })
-  observeEvent(input$dark, { rv$alpha <- 0.85 })
+  observeEvent(input$dark, { rv$alpha <- 0.78 })
 
   df1 <- eventReactive(input$clicks1, {data.frame(fromJSON(getURL(URLencode(gsub("\n", " ", 'skipper.cs.utexas.edu:5001/rest/native/?query=
             "select AGE_GROUP, SEX, sum_death, sum_100, kpi as ratio, 
@@ -49,7 +49,7 @@ shinyServer(function(input, output) {
   })
   
   output$distPlot1 <- renderPlot(height=500, width=900,{             
-    plot <- ggplot() + 
+    plot1 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_discrete() +
@@ -77,11 +77,11 @@ shinyServer(function(input, output) {
             stat="identity", 
             stat_params=list(), 
             geom="tile",
-            geom_params=list(alpha=0.50), 
+            geom_params=list(alpha=rv$alpha), 
             position=position_identity()
             
       )
-    plot
+    plot1
   }) 
   
   observeEvent(input$clicks1, {
@@ -99,7 +99,7 @@ shinyServer(function(input, output) {
   df2 <- eventReactive(input$clicks2, {bar_df})
   
   output$distPlot2 <- renderPlot(height=450, width=5000, {
-    plot1 <- ggplot() + 
+    plot2 <- ggplot() + 
       coord_cartesian() + 
       scale_x_discrete() +
       scale_y_continuous() +
@@ -144,10 +144,10 @@ shinyServer(function(input, output) {
             geom_params=list(colour="red")
       ) 
     
-    plot1
+    plot2
   })
-  observeEvent(input$clicks, {
-    print(as.numeric(input$clicks))
+  observeEvent(input$clicks2, {
+    print(as.numeric(input$clicks2))
   })
  
   
@@ -176,5 +176,8 @@ df3 <- eventReactive(input$clicks3, {death_df  })
       )
     
     plot3
+  })
+  observeEvent(input$clicks3, {
+    print(as.numeric(input$clicks3))
   })
 })

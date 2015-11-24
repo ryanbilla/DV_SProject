@@ -1,8 +1,8 @@
 name: WorldDiseasePopulationData
 account: nathanriojas
 server: shinyapps.io
-bundleId: 317136
+bundleId: 317935
 url: https://nathanriojas.shinyapps.io/WorldDiseasePopulationData
-when: 1448263476.21717
+when: 1448339214.88582
 asMultiple: FALSE
 asStatic: FALSE
